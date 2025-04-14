@@ -1,12 +1,53 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 function App() {
+    const [targetElement, setTargetElement] = useState(null)
+    const [isSelecting, setIsSelecting] = useState(false)
+    const [isAutoClicking, setIsAutoClicking] = useState(false)
+
     const [count, setCount] = useState(0)
     const [intervalTime, setIntervalTime] = useState(1000)
     const [goalCount, setGoalCount] = useState(10)
     const intervalRef = useRef(null)
 
+    useEffect(() => {
+        let intervalId;
+        if (isAutoClicking && targetElement) { // 自動クリック中かつターゲット要素がある場合
+            // 自動クリックを開始
+            intervalId = setInterval(() => {
+                targetElement.click()
+            }, intervalTime)
+        }
+
+        return () => clearInterval(intervalId)
+    }, [isAutoClicking, targetElement])
+
+    //
+    const handleStateSelecting = () => {
+        setIsSelecting(true);
+    }
+
+    const handleDocumentClick = (e) => {
+        if (isSelecting) {
+            e.preventDefault(); // クリックイベントのデフォルト動作を防ぐ
+            e.stopPropagation(); // クリックイベントのバブリングを防ぐ
+            setTargetElement(e.target); // クリックした要素をターゲットに設定
+            setIsSelecting(false); // 選択モードを終了
+            alert(`ターゲット要素が設定されました！`);
+        }
+    }
+
+    // クリックイベントをキャプチャリングフェーズで取得するために、documentにイベントリスナーを追加
+    useEffect(() => {
+        document.addEventListener('click', handleDocumentClick, true); // キャプチャリングフェーズでイベントを取得
+        return () => {
+            document.removeEventListener('click', handleDocumentClick, true);
+        };
+    }, [isSelecting])
+
+
+    // -------
     const startAutoClick = () => {
         if (intervalRef.current) return // すでに自動クリック中なら何もしない
         // 自動クリックを開始
@@ -45,10 +86,31 @@ function App() {
         setCount(0)
         stopAutoClick()
     }
+    // -------
 
     return (
         <div>
-            <h1>オートクリッカー</h1>
+            <h2>自由ターゲットオートクリッカー</h2>
+
+            <button onClick={handleStateSelecting} disabled={isSelecting}>
+                {isSelecting ? '選択中...' : 'ターゲット要素を選択'}
+            </button>
+
+            <button
+                onClick={() => setIsAutoClicking((prev) => !prev)}
+                disabled={!targetElement}
+            >
+                {isAutoClicking ? '自動クリック停止' : '自動クリック開始'}
+            </button>
+
+            <div>
+                {/* テスト用のクリック対象要素 */}
+                <button onClick={() => alert('ボタンAがクリックされました!')}>ボタンＡ</button>
+                <button onClick={() => alert('ボタンBがクリックされました!')}>ボタンＢ</button>
+            </div>
+
+
+            {/* <h2>オートクリッカー</h2>
             <p>クリック回数: {count}</p>
 
             <div className="card">
@@ -91,7 +153,8 @@ function App() {
                 <button onClick={resetCount}>
                     リセット
                 </button>
-            </div>
+            </div> */}
+
         </div>
     )
 }
